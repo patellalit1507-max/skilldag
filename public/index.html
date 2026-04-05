@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SkillDAG - Learning Paths</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+
+    /* ===== HOME PAGE ===== */
+    .home { display: flex; flex-direction: column; min-height: 100vh; }
+    .home-header {
+      text-align: center; padding: 40px 20px 20px;
+      background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+      border-bottom: 1px solid #1e293b;
+    }
+    .home-header h1 { font-size: 2rem; color: #38bdf8; margin-bottom: 8px; }
+    .home-header p { color: #94a3b8; font-size: 0.95rem; max-width: 640px; margin: 0 auto; line-height: 1.6; }
+    .home-stats { display: flex; justify-content: center; gap: 20px; margin-top: 20px; flex-wrap: wrap; }
+    .home-stats .stat {
+      text-align: center; padding: 12px 24px; background: #0f172a; border-radius: 10px;
+      border: 1px solid #334155; min-width: 110px;
+    }
+    .home-stats .stat .val { font-size: 1.4rem; font-weight: 700; color: #4ade80; }
+    .home-stats .stat .lbl { font-size: 0.72rem; color: #94a3b8; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+    /* Roadmap tabs */
+    .roadmap-tabs {
+      display: flex; justify-content: center; gap: 12px; margin-top: 20px; flex-wrap: wrap;
+    }
+    .roadmap-tab {
+      padding: 10px 24px; border-radius: 10px; border: 2px solid #334155; background: #1e293b;
+      color: #94a3b8; font-size: 0.9rem; font-weight: 600; cursor: pointer;
+      transition: all 0.2s; display: flex; align-items: center; gap: 8px;
+    }
+    .roadmap-tab:hover { border-color: #475569; color: #e2e8f0; }
+    .roadmap-tab.active { border-color: #38bdf8; color: #38bdf8; background: #0c2d4d; }
+    .roadmap-tab .tab-icon { font-size: 1.1rem; }
+    .roadmap-tab .tab-count {
+      font-size: 0.7rem; background: #334155; padding: 2px 7px; border-radius: 8px; color: #94a3b8;
+    }
+    .roadmap-tab.active .tab-count { background: #164e7a; color: #38bdf8; }
+
+    /* Empty roadmap state */
+    .dag-empty {
+      text-align: center; padding: 80px 20px; color: #475569;
+    }
+    .dag-empty .empty-icon { font-size: 4rem; margin-bottom: 16px; }
+    .dag-empty h2 { font-size: 1.4rem; color: #64748b; margin-bottom: 8px; }
+    .dag-empty p { font-size: 0.9rem; color: #475569; max-width: 400px; margin: 0 auto; line-height: 1.6; }
+
+    /* DAG area */
+    .dag-scroll { flex: 1; overflow: auto; position: relative; }
+    .dag-wrapper { position: relative; padding: 30px 20px 60px; min-width: fit-content; }
+    .dag-wrapper svg.dag-lines {
+      position: absolute; top: 0; left: 0; pointer-events: none; z-index: 0;
+      overflow: visible;
+    }
+
+    /* Level rows */
+    .dag-level { position: relative; z-index: 1; margin-bottom: 28px; }
+    .dag-level:last-child { margin-bottom: 0; }
+    .dag-level-label {
+      font-size: 0.68rem; color: #475569; font-weight: 600; letter-spacing: 1.5px;
+      text-transform: uppercase; text-align: center; margin-bottom: 12px;
+    }
+    .dag-level-row {
+      display: flex; justify-content: center; gap: 32px; flex-wrap: wrap;
+    }
+
+    /* Nodes */
+    .dag-node {
+      width: 260px; padding: 18px; border-radius: 14px;
+      background: #1e293b; border: 2px solid #334155; cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+      display: flex; flex-direction: column;
+    }
+    .dag-node:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,0,0,0.5); }
+    .dag-node-top { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+    .dag-node .node-icon {
+      width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center;
+      justify-content: center; font-size: 0.75rem; font-weight: 800; color: #fff; flex-shrink: 0;
+      letter-spacing: -0.5px;
+    }
+    .dag-node .node-title-wrap { flex: 1; min-width: 0; }
+    .dag-node .node-title { font-size: 0.92rem; font-weight: 700; color: #f1f5f9; line-height: 1.2; }
+    .dag-node .node-badge {
+      display: inline-block; margin-top: 3px; padding: 1px 7px; border-radius: 4px;
+      font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .dag-node .node-badge.sql { background: #1e3a5f; color: #60a5fa; }
+    .dag-node .node-badge.python { background: #422006; color: #fbbf24; }
+    .dag-node .node-badge.quiz { background: #14532d; color: #4ade80; }
+    .dag-node .node-desc { font-size: 0.73rem; color: #94a3b8; line-height: 1.45; margin-bottom: 10px; flex: 1; }
+    .dag-node .node-footer { margin-top: auto; }
+    .dag-node .node-progress-bar {
+      height: 6px; background: #334155; border-radius: 3px; overflow: hidden; margin-bottom: 6px;
+    }
+    .dag-node .node-progress-fill { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
+    .dag-node .node-progress-text {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 0.7rem; color: #64748b;
+    }
+    .dag-node .node-progress-text .pct { font-weight: 700; }
+
+    /* ===== PRACTICE PAGE ===== */
+    .practice { display: none; height: 100vh; }
+    .practice.active { display: flex; }
+
+    .sidebar { width: 300px; background: #1e293b; border-right: 1px solid #334155; flex-shrink: 0; display: flex; flex-direction: column; }
+    .sidebar-header { padding: 16px; border-bottom: 1px solid #334155; }
+    .sidebar-header .back-btn {
+      display: inline-flex; align-items: center; gap: 6px; background: none; border: none;
+      color: #94a3b8; font-size: 0.8rem; cursor: pointer; padding: 4px 0; margin-bottom: 10px;
+    }
+    .sidebar-header .back-btn:hover { color: #e2e8f0; }
+    .sidebar-header h2 { font-size: 1.05rem; margin-bottom: 4px; }
+    .sidebar-header .module-type { font-size: 0.75rem; text-transform: uppercase; font-weight: 700; }
+    .sidebar-header .score-line { font-size: 0.8rem; color: #94a3b8; margin-top: 6px; }
+    .sidebar-header .score-line span { color: #4ade80; font-weight: 700; }
+
+    .question-list { flex: 1; overflow-y: auto; padding: 8px; }
+    .question-item {
+      padding: 10px 14px; margin: 4px 0; border-radius: 8px; cursor: pointer;
+      display: flex; align-items: center; gap: 10px; transition: background 0.15s;
+    }
+    .question-item:hover { background: #334155; }
+    .question-item.active { background: #0ea5e9; color: #fff; }
+    .question-item .num {
+      width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center;
+      justify-content: center; font-size: 0.8rem; font-weight: 700; background: #334155; flex-shrink: 0;
+    }
+    .question-item.active .num { background: rgba(255,255,255,0.2); }
+    .question-item.solved .num { background: #166534; color: #4ade80; }
+    .question-item .info { flex: 1; min-width: 0; }
+    .question-item .info .title { font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .question-item .info .diff { font-size: 0.7rem; margin-top: 2px; padding: 1px 6px; border-radius: 4px; display: inline-block; }
+    .question-item .info .diff.easy { background: #166534; color: #4ade80; }
+    .question-item .info .diff.medium { background: #854d0e; color: #fbbf24; }
+    .question-item .info .diff.advanced { background: #7f1d1d; color: #fca5a5; }
+    .question-item.active .info .diff { opacity: 0.85; }
+
+    .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .problem-panel { padding: 20px 24px; border-bottom: 1px solid #334155; background: #1e293b; }
+    .problem-panel h2 { font-size: 1.1rem; color: #38bdf8; margin-bottom: 8px; }
+    .problem-panel p { font-size: 0.9rem; line-height: 1.6; }
+
+    .schema-area { padding: 12px 24px; border-bottom: 1px solid #334155; background: #1a2332; max-height: 200px; overflow-y: auto; }
+    .schema-area summary { font-size: 0.8rem; color: #94a3b8; cursor: pointer; user-select: none; }
+    .schema-area pre { font-size: 0.78rem; color: #cbd5e1; margin-top: 8px; white-space: pre-wrap; }
+
+    .workspace { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .editor-area { padding: 16px 24px; display: flex; flex-direction: column; gap: 10px; }
+    .editor-area textarea {
+      width: 100%; min-height: 140px; background: #0f172a; color: #e2e8f0; border: 1px solid #334155;
+      border-radius: 8px; padding: 12px; font-family: 'Consolas', 'Fira Code', monospace; font-size: 0.9rem;
+      resize: vertical; outline: none; tab-size: 4;
+    }
+    .editor-area textarea:focus { border-color: #0ea5e9; }
+    .btn-row { display: flex; gap: 10px; }
+    .btn {
+      padding: 8px 20px; border: none; border-radius: 6px; font-size: 0.85rem; font-weight: 600;
+      cursor: pointer; transition: opacity 0.15s;
+    }
+    .btn:hover { opacity: 0.85; }
+    .btn-run { background: #0ea5e9; color: #fff; }
+    .btn-answer { background: #334155; color: #e2e8f0; }
+
+    .quiz-question { font-size: 1rem; line-height: 1.6; margin-bottom: 16px; color: #f1f5f9; }
+    .quiz-options { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+    .quiz-option {
+      padding: 12px 16px; border: 2px solid #334155; border-radius: 8px; cursor: pointer;
+      font-size: 0.9rem; transition: all 0.15s; background: #1e293b; display: flex; align-items: center; gap: 10px;
+    }
+    .quiz-option:hover { border-color: #64748b; background: #253345; }
+    .quiz-option.selected { border-color: #0ea5e9; background: #0c2d48; }
+    .quiz-option.correct { border-color: #4ade80; background: #14532d; }
+    .quiz-option.wrong { border-color: #f87171; background: #7f1d1d; }
+    .quiz-option .opt-letter {
+      width: 28px; height: 28px; border-radius: 50%; background: #334155; display: flex;
+      align-items: center; justify-content: center; font-weight: 700; font-size: 0.8rem; flex-shrink: 0;
+    }
+    .quiz-explanation {
+      padding: 12px 16px; background: #1e293b; border: 1px solid #334155; border-radius: 8px;
+      font-size: 0.85rem; color: #94a3b8; line-height: 1.5; margin-top: 12px;
+    }
+
+    .result-area { flex: 1; padding: 0 24px 20px; overflow-y: auto; }
+    .result-banner { padding: 10px 16px; border-radius: 8px; margin-bottom: 12px; font-weight: 600; font-size: 0.9rem; }
+    .result-banner.correct { background: #166534; color: #4ade80; }
+    .result-banner.incorrect { background: #7f1d1d; color: #fca5a5; }
+    .result-banner.error { background: #7f1d1d; color: #fca5a5; }
+    .result-section h3 { font-size: 0.85rem; color: #94a3b8; margin: 12px 0 6px; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 0.82rem; margin-bottom: 16px; }
+    th, td { text-align: left; padding: 6px 12px; border: 1px solid #334155; }
+    th { background: #1e293b; color: #94a3b8; font-weight: 600; }
+    td { color: #cbd5e1; }
+
+    .test-case { padding: 8px 12px; border-radius: 6px; margin-bottom: 6px; font-family: 'Consolas', monospace; font-size: 0.82rem; }
+    .test-case.passed { background: #166534; color: #4ade80; }
+    .test-case.failed { background: #7f1d1d; color: #fca5a5; }
+    .test-case .label { font-weight: 700; margin-bottom: 2px; }
+
+    .answer-box { background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 12px; margin-top: 8px; }
+    .answer-box pre { font-family: 'Consolas', monospace; font-size: 0.85rem; color: #4ade80; white-space: pre-wrap; }
+
+    /* Auth bar */
+    .auth-bar {
+      display: flex; align-items: center; justify-content: flex-end; gap: 12px;
+      padding: 10px 24px; background: #1e293b; border-bottom: 1px solid #334155;
+    }
+    .auth-bar .user-info { display: flex; align-items: center; gap: 8px; }
+    .auth-bar .avatar {
+      width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center;
+      justify-content: center; font-weight: 700; font-size: 0.85rem; color: #fff; background: #6366f1;
+    }
+    .auth-bar .user-name { font-size: 0.85rem; color: #e2e8f0; font-weight: 600; }
+    .auth-bar .auth-btn {
+      padding: 6px 16px; border: 1px solid #475569; border-radius: 6px; background: transparent;
+      color: #94a3b8; font-size: 0.8rem; cursor: pointer; transition: all 0.15s;
+    }
+    .auth-bar .auth-btn:hover { border-color: #94a3b8; color: #e2e8f0; }
+    .auth-bar .auth-btn.primary { background: #0ea5e9; border-color: #0ea5e9; color: #fff; }
+    .auth-bar .auth-btn.primary:hover { background: #0284c7; }
+    .auth-bar .saved-badge { font-size: 0.7rem; color: #4ade80; opacity: 0; transition: opacity 0.3s; }
+    .auth-bar .saved-badge.show { opacity: 1; }
+
+    /* Modal */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+      z-index: 100; align-items: center; justify-content: center;
+    }
+    .modal-overlay.show { display: flex; }
+    .modal {
+      background: #1e293b; border: 1px solid #334155; border-radius: 16px;
+      padding: 32px; width: 380px; max-width: 90vw;
+    }
+    .modal h2 { color: #f1f5f9; font-size: 1.3rem; margin-bottom: 4px; }
+    .modal .modal-sub { color: #94a3b8; font-size: 0.82rem; margin-bottom: 20px; }
+    .modal .field { margin-bottom: 14px; }
+    .modal .field label { display: block; font-size: 0.78rem; color: #94a3b8; margin-bottom: 5px; font-weight: 600; }
+    .modal .field input {
+      width: 100%; padding: 10px 12px; background: #0f172a; border: 1px solid #334155;
+      border-radius: 8px; color: #e2e8f0; font-size: 0.9rem; outline: none;
+    }
+    .modal .field input:focus { border-color: #0ea5e9; }
+    .modal .modal-btn {
+      width: 100%; padding: 10px; border: none; border-radius: 8px; background: #0ea5e9;
+      color: #fff; font-size: 0.9rem; font-weight: 600; cursor: pointer; margin-top: 6px;
+    }
+    .modal .modal-btn:hover { background: #0284c7; }
+    .modal .modal-error { color: #f87171; font-size: 0.8rem; margin-top: 8px; min-height: 1.2em; }
+    .modal .modal-switch { text-align: center; margin-top: 14px; font-size: 0.82rem; color: #94a3b8; }
+    .modal .modal-switch a { color: #38bdf8; cursor: pointer; text-decoration: none; }
+    .modal .modal-switch a:hover { text-decoration: underline; }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .dag-node { width: 220px; padding: 14px; }
+      .dag-level-row { gap: 16px; }
+    }
+    @media (max-width: 700px) {
+      .dag-node { width: 90vw; max-width: 320px; }
+      .dag-level-row { flex-direction: column; align-items: center; gap: 12px; }
+      .practice.active { flex-direction: column; }
+      .sidebar { width: 100%; max-height: 220px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ==================== AUTH BAR ==================== -->
+<div class="auth-bar" id="authBar">
+  <span class="saved-badge" id="savedBadge">Progress saved</span>
+  <div id="authLoggedOut">
+    <button class="auth-btn" onclick="showAuthModal('login')">Log In</button>
+    <button class="auth-btn primary" onclick="showAuthModal('register')">Sign Up</button>
+  </div>
+  <div id="authLoggedIn" style="display:none;">
+    <div class="user-info">
+      <div class="avatar" id="userAvatar">?</div>
+      <span class="user-name" id="userName"></span>
+    </div>
+  </div>
+  <button class="auth-btn" id="logoutBtn" style="display:none;" onclick="logout()">Log Out</button>
+</div>
+
+<!-- ==================== AUTH MODAL ==================== -->
+<div class="modal-overlay" id="authModal">
+  <div class="modal">
+    <h2 id="modalTitle">Log In</h2>
+    <p class="modal-sub" id="modalSub">Welcome back! Enter your credentials.</p>
+    <div class="field" id="fieldName" style="display:none;">
+      <label>Display Name</label>
+      <input type="text" id="inputName" placeholder="Your name" />
+    </div>
+    <div class="field">
+      <label>Username</label>
+      <input type="text" id="inputUsername" placeholder="Enter username" />
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" id="inputPassword" placeholder="Enter password" />
+    </div>
+    <button class="modal-btn" id="modalSubmit" onclick="submitAuth()">Log In</button>
+    <div class="modal-error" id="modalError"></div>
+    <div class="modal-switch" id="modalSwitch">
+      Don't have an account? <a onclick="showAuthModal('register')">Sign Up</a>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== HOME VIEW ==================== -->
+<div class="home" id="homeView">
+  <div class="home-header">
+    <h1 id="roadmapTitle">Data Engineering Learning Path</h1>
+    <p id="roadmapDesc">Master data engineering from scratch. Follow the DAG below &mdash; each node is a module with hands-on practice questions.</p>
+    <div class="roadmap-tabs" id="roadmapTabs"></div>
+    <div class="home-stats">
+      <div class="stat"><div class="val" id="statModules">0</div><div class="lbl">Modules</div></div>
+      <div class="stat"><div class="val" id="statQuestions">0</div><div class="lbl">Questions</div></div>
+      <div class="stat"><div class="val" id="statCompleted">0</div><div class="lbl">Completed</div></div>
+    </div>
+  </div>
+  <div class="dag-scroll">
+    <div class="dag-wrapper" id="dagWrapper">
+      <svg class="dag-lines" id="dagSvg"></svg>
+      <div id="dagLevels"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== PRACTICE VIEW ==================== -->
+<div class="practice" id="practiceView">
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <button class="back-btn" onclick="goHome()">&#8592; Back to Learning Path</button>
+      <h2 id="moduleTitle" style="color: #38bdf8;"></h2>
+      <div class="module-type" id="moduleType"></div>
+      <div class="score-line">Score: <span id="practiceScore">0</span> / <span id="practiceTotal">0</span></div>
+    </div>
+    <div class="question-list" id="questionList"></div>
+  </div>
+  <div class="main" id="mainArea"></div>
+</div>
+
+<script>
+// ==================== STATE ====================
+let roadmapsData = [];
+let currentRoadmap = null;
+let modulesData = [];
+let currentModule = null;
+let currentQuestions = [];
+let currentQuestion = null;
+const solved = {};
+let quizSelected = null;
+let quizSubmitted = false;
+const quizCounts = {};
+
+// Auth state
+let authToken = localStorage.getItem("authToken") || null;
+let currentUser = null;
+let authMode = "login"; // "login" or "register"
+
+// ==================== AUTH ====================
+function getAuthHeaders() {
+  const h = { "Content-Type": "application/json" };
+  if (authToken) h["Authorization"] = `Bearer ${authToken}`;
+  return h;
+}
+
+function showAuthModal(mode) {
+  authMode = mode;
+  document.getElementById("authModal").classList.add("show");
+  document.getElementById("modalError").textContent = "";
+  document.getElementById("inputUsername").value = "";
+  document.getElementById("inputPassword").value = "";
+  document.getElementById("inputName").value = "";
+  if (mode === "register") {
+    document.getElementById("modalTitle").textContent = "Create Account";
+    document.getElementById("modalSub").textContent = "Sign up to save your progress across sessions.";
+    document.getElementById("fieldName").style.display = "block";
+    document.getElementById("modalSubmit").textContent = "Sign Up";
+    document.getElementById("modalSwitch").innerHTML = 'Already have an account? <a onclick="showAuthModal(\'login\')">Log In</a>';
+  } else {
+    document.getElementById("modalTitle").textContent = "Log In";
+    document.getElementById("modalSub").textContent = "Welcome back! Enter your credentials.";
+    document.getElementById("fieldName").style.display = "none";
+    document.getElementById("modalSubmit").textContent = "Log In";
+    document.getElementById("modalSwitch").innerHTML = 'Don\'t have an account? <a onclick="showAuthModal(\'register\')">Sign Up</a>';
+  }
+  setTimeout(() => document.getElementById("inputUsername").focus(), 100);
+}
+
+function closeAuthModal() {
+  document.getElementById("authModal").classList.remove("show");
+}
+
+// Close modal on overlay click
+document.getElementById("authModal").addEventListener("click", (e) => {
+  if (e.target === e.currentTarget) closeAuthModal();
+});
+
+async function submitAuth() {
+  const username = document.getElementById("inputUsername").value.trim();
+  const password = document.getElementById("inputPassword").value;
+  const displayName = document.getElementById("inputName").value.trim();
+  const errEl = document.getElementById("modalError");
+  errEl.textContent = "";
+
+  if (!username || !password) { errEl.textContent = "Please fill in all fields."; return; }
+
+  const url = authMode === "register" ? "/api/register" : "/api/login";
+  const body = authMode === "register"
+    ? { username, password, displayName: displayName || username }
+    : { username, password };
+
+  try {
+    const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const data = await res.json();
+    if (!res.ok) { errEl.textContent = data.error || "Something went wrong"; return; }
+
+    authToken = data.token;
+    currentUser = data.user;
+    localStorage.setItem("authToken", authToken);
+    closeAuthModal();
+    updateAuthUI();
+    await loadProgress();
+    renderDAG();
+  } catch (e) { errEl.textContent = "Network error. Please try again."; }
+}
+
+// Submit on Enter in password field
+document.getElementById("inputPassword").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") submitAuth();
+});
+
+async function logout() {
+  if (authToken) {
+    try { await fetch("/api/logout", { method: "POST", headers: getAuthHeaders() }); } catch {}
+  }
+  authToken = null;
+  currentUser = null;
+  localStorage.removeItem("authToken");
+  // Clear local progress
+  Object.keys(solved).forEach(k => delete solved[k]);
+  updateAuthUI();
+  renderDAG();
+}
+
+function updateAuthUI() {
+  if (currentUser) {
+    document.getElementById("authLoggedOut").style.display = "none";
+    document.getElementById("authLoggedIn").style.display = "flex";
+    document.getElementById("logoutBtn").style.display = "block";
+    document.getElementById("userName").textContent = currentUser.displayName;
+    document.getElementById("userAvatar").textContent = currentUser.displayName.charAt(0).toUpperCase();
+  } else {
+    document.getElementById("authLoggedOut").style.display = "flex";
+    document.getElementById("authLoggedIn").style.display = "none";
+    document.getElementById("logoutBtn").style.display = "none";
+  }
+}
+
+async function loadProgress() {
+  if (!authToken) return;
+  try {
+    const res = await fetch("/api/progress", { headers: getAuthHeaders() });
+    if (!res.ok) return;
+    const data = await res.json();
+    // Rebuild solved sets from server data
+    Object.keys(solved).forEach(k => delete solved[k]);
+    Object.entries(data.progress).forEach(([moduleId, items]) => {
+      solved[moduleId] = new Set(items.map(i => i.questionId));
+    });
+  } catch {}
+}
+
+async function saveProgress(moduleId, questionId) {
+  if (!authToken) return;
+  try {
+    await fetch("/api/progress", {
+      method: "POST", headers: getAuthHeaders(),
+      body: JSON.stringify({ module_id: moduleId, question_id: questionId }),
+    });
+    // Flash saved badge
+    const badge = document.getElementById("savedBadge");
+    badge.classList.add("show");
+    setTimeout(() => badge.classList.remove("show"), 1500);
+  } catch {}
+}
+
+async function tryRestoreSession() {
+  if (!authToken) return;
+  try {
+    const res = await fetch("/api/me", { headers: getAuthHeaders() });
+    if (res.ok) {
+      const data = await res.json();
+      currentUser = data.user;
+      updateAuthUI();
+      await loadProgress();
+    } else {
+      authToken = null;
+      localStorage.removeItem("authToken");
+    }
+  } catch { authToken = null; localStorage.removeItem("authToken"); }
+}
+
+// ==================== INIT ====================
+async function init() {
+  await tryRestoreSession();
+  const rmRes = await fetch("/api/roadmaps");
+  roadmapsData = await rmRes.json();
+  renderRoadmapTabs();
+  await switchRoadmap(roadmapsData[0]?.id || "data-engineering");
+  updateAuthUI();
+  window.addEventListener("resize", drawArrows);
+}
+
+async function switchRoadmap(roadmapId) {
+  currentRoadmap = roadmapsData.find(r => r.id === roadmapId) || roadmapsData[0];
+  const res = await fetch(`/api/modules?roadmap=${roadmapId}`);
+  modulesData = await res.json();
+
+  // Load quiz counts for this roadmap
+  const quizModules = modulesData.filter(m => m.type === "quiz");
+  await Promise.all(quizModules.map(async (m) => {
+    if (quizCounts[m.id] == null) {
+      const r = await fetch(`/api/quiz-questions/${m.id}`);
+      quizCounts[m.id] = (await r.json()).length;
+    }
+  }));
+
+  // Update header
+  const titles = {
+    "data-engineering": { title: "Data Engineering Learning Path", desc: "Master data engineering from scratch. Follow the DAG below \u2014 each node is a module with hands-on practice questions." },
+    "ai-ml": { title: "AI / ML Mastery", desc: "Your roadmap to mastering Artificial Intelligence and Machine Learning. Topics will be added progressively \u2014 stay tuned!" },
+  };
+  const t = titles[roadmapId] || { title: currentRoadmap.title, desc: "" };
+  document.getElementById("roadmapTitle").textContent = t.title;
+  document.getElementById("roadmapDesc").textContent = t.desc;
+
+  // Update active tab
+  document.querySelectorAll(".roadmap-tab").forEach(tab => {
+    tab.classList.toggle("active", tab.dataset.id === roadmapId);
+  });
+
+  renderDAG();
+}
+
+function renderRoadmapTabs() {
+  const tabIcons = { "data-engineering": "\u2699\ufe0f", "ai-ml": "\ud83e\udde0" };
+  document.getElementById("roadmapTabs").innerHTML = roadmapsData.map(r =>
+    `<div class="roadmap-tab" data-id="${r.id}" onclick="switchRoadmap('${r.id}')">
+      <span class="tab-icon">${tabIcons[r.id] || "\ud83d\udcda"}</span>
+      ${r.title}
+      <span class="tab-count">${r.moduleCount} modules</span>
+    </div>`
+  ).join("");
+}
+
+// ==================== DAG RENDERING ====================
+const LEVEL_LABELS = ["Foundations", "Intermediate", "Core Data Engineering", "Ecosystem", "Advanced", "DevOps & Capstone"];
+
+function getModuleQuestionCount(mod) {
+  if (mod.type === "sql" || mod.type === "python") return mod.questionFilter?.ids?.length || 0;
+  return quizCounts[mod.id] || 0;
+}
+
+function getIcon(icon) {
+  const icons = { db:"SQL", py:"PY", terminal:">_", git:"GIT", schema:"ER", pipeline:"ETL", docker:"DOC", warehouse:"WH", spark:"SPK", airflow:"AF", cloud:"CLD", stream:"STR", check:"QA", rocket:"CI" };
+  return icons[icon] || "?";
+}
+
+function renderDAG() {
+  const container = document.getElementById("dagLevels");
+
+  if (modulesData.length === 0) {
+    container.innerHTML = `<div class="dag-empty">
+      <div class="empty-icon">\ud83d\udea7</div>
+      <h2>Coming Soon</h2>
+      <p>This roadmap is under construction. New topics and practice modules will be added progressively. Check back soon!</p>
+    </div>`;
+    document.getElementById("dagSvg").innerHTML = "";
+    updateStats();
+    return;
+  }
+
+  const maxLevel = Math.max(...modulesData.map(m => m.level));
+
+  let html = "";
+  for (let lvl = 0; lvl <= maxLevel; lvl++) {
+    const mods = modulesData.filter(m => m.level === lvl).sort((a, b) => a.col - b.col);
+    html += `<div class="dag-level">
+      <div class="dag-level-label">${LEVEL_LABELS[lvl] || 'Level ' + lvl}</div>
+      <div class="dag-level-row">
+        ${mods.map(mod => renderNode(mod)).join("")}
+      </div>
+    </div>`;
+  }
+  container.innerHTML = html;
+
+  // Attach click handlers
+  container.querySelectorAll(".dag-node").forEach(el => {
+    el.addEventListener("click", () => openModule(el.dataset.id));
+    const color = el.dataset.color;
+    el.style.borderColor = color + "44";
+    el.addEventListener("mouseenter", () => { el.style.borderColor = color; });
+    el.addEventListener("mouseleave", () => { el.style.borderColor = color + "44"; });
+  });
+
+  updateStats();
+  requestAnimationFrame(drawArrows);
+}
+
+function renderNode(mod) {
+  const solvedSet = solved[mod.id] || new Set();
+  const totalQ = getModuleQuestionCount(mod);
+  const solvedCount = solvedSet.size;
+  const pct = totalQ > 0 ? Math.round((solvedCount / totalQ) * 100) : 0;
+
+  return `<div class="dag-node" data-id="${mod.id}" data-color="${mod.color}">
+    <div class="dag-node-top">
+      <div class="node-icon" style="background:${mod.color}">${getIcon(mod.icon)}</div>
+      <div class="node-title-wrap">
+        <div class="node-title">${mod.shortTitle}</div>
+        <span class="node-badge ${mod.type}">${mod.type === 'sql' ? 'SQL' : mod.type === 'python' ? 'Python' : 'Quiz'}</span>
+      </div>
+    </div>
+    <div class="node-desc">${mod.description}</div>
+    <div class="node-footer">
+      <div class="node-progress-bar"><div class="node-progress-fill" style="width:${pct}%;background:${mod.color}"></div></div>
+      <div class="node-progress-text">
+        <span>${solvedCount} / ${totalQ} questions</span>
+        <span class="pct" style="color:${pct === 100 ? '#4ade80' : pct > 0 ? mod.color : '#64748b'}">${pct}%</span>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ==================== SVG ARROWS ====================
+function drawArrows() {
+  const svg = document.getElementById("dagSvg");
+  const wrapper = document.getElementById("dagWrapper");
+  if (!svg || !wrapper) return;
+
+  const wrapperRect = wrapper.getBoundingClientRect();
+  svg.setAttribute("width", wrapper.scrollWidth);
+  svg.setAttribute("height", wrapper.scrollHeight);
+  svg.style.width = wrapper.scrollWidth + "px";
+  svg.style.height = wrapper.scrollHeight + "px";
+
+  // Build a map of node element centers (bottom / top)
+  const nodeEls = {};
+  wrapper.querySelectorAll(".dag-node").forEach(el => {
+    const rect = el.getBoundingClientRect();
+    nodeEls[el.dataset.id] = {
+      topCenter: { x: rect.left + rect.width / 2 - wrapperRect.left, y: rect.top - wrapperRect.top },
+      bottomCenter: { x: rect.left + rect.width / 2 - wrapperRect.left, y: rect.bottom - wrapperRect.top },
+    };
+  });
+
+  let paths = `<defs><marker id="arrowhead" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 1 L 10 5 L 0 9 z" fill="#475569"/></marker></defs>`;
+
+  modulesData.forEach(mod => {
+    mod.deps.forEach(depId => {
+      const from = nodeEls[depId];
+      const to = nodeEls[mod.id];
+      if (!from || !to) return;
+
+      const x1 = from.bottomCenter.x, y1 = from.bottomCenter.y;
+      const x2 = to.topCenter.x, y2 = to.topCenter.y;
+      const dy = y2 - y1;
+      const cy1 = y1 + dy * 0.45;
+      const cy2 = y2 - dy * 0.45;
+
+      paths += `<path d="M ${x1} ${y1} C ${x1} ${cy1}, ${x2} ${cy2}, ${x2} ${y2}" fill="none" stroke="#475569" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#arrowhead)" opacity="0.7"/>`;
+    });
+  });
+
+  svg.innerHTML = paths;
+}
+
+function updateStats() {
+  document.getElementById("statModules").textContent = modulesData.length;
+  let totalQ = 0, totalSolved = 0;
+  modulesData.forEach(m => {
+    totalQ += getModuleQuestionCount(m);
+    totalSolved += (solved[m.id] || new Set()).size;
+  });
+  document.getElementById("statQuestions").textContent = totalQ;
+  document.getElementById("statCompleted").textContent = totalSolved;
+}
+
+// ==================== OPEN MODULE ====================
+async function openModule(moduleId) {
+  const mod = modulesData.find(m => m.id === moduleId);
+  if (!mod) return;
+  currentModule = mod;
+  if (!solved[mod.id]) solved[mod.id] = new Set();
+
+  document.getElementById("moduleTitle").textContent = mod.title;
+  document.getElementById("moduleTitle").style.color = mod.color;
+  document.getElementById("moduleType").textContent = mod.type === "sql" ? "SQL Practice" : mod.type === "python" ? "Python Practice" : "Concept Quiz";
+  document.getElementById("moduleType").style.color = mod.color;
+
+  if (mod.type === "sql") {
+    const ids = mod.questionFilter?.ids?.join(",") || "";
+    currentQuestions = await (await fetch(`/api/questions?ids=${ids}`)).json();
+  } else if (mod.type === "python") {
+    const ids = mod.questionFilter?.ids?.join(",") || "";
+    currentQuestions = await (await fetch(`/api/python-questions?ids=${ids}`)).json();
+  } else {
+    currentQuestions = await (await fetch(`/api/quiz-questions/${mod.id}`)).json();
+  }
+
+  document.getElementById("practiceTotal").textContent = currentQuestions.length;
+  document.getElementById("practiceScore").textContent = solved[mod.id].size;
+  document.getElementById("homeView").style.display = "none";
+  document.getElementById("practiceView").classList.add("active");
+
+  renderQuestionList();
+  if (currentQuestions.length) selectQuestion(0);
+}
+
+function goHome() {
+  document.getElementById("practiceView").classList.remove("active");
+  document.getElementById("homeView").style.display = "flex";
+  currentModule = null; currentQuestions = []; currentQuestion = null;
+  renderDAG();
+}
+
+// ==================== QUESTION LIST ====================
+function renderQuestionList() {
+  const list = document.getElementById("questionList");
+  const solvedSet = solved[currentModule.id] || new Set();
+
+  list.innerHTML = currentQuestions.map((q, i) => {
+    const isSolved = solvedSet.has(q.id);
+    const isActive = currentQuestion && currentQuestion.id === q.id;
+    const title = q.title || q.question?.substring(0, 40) + "..." || `Question ${i + 1}`;
+    const diff = q.difficulty || "";
+    return `<div class="question-item ${isActive ? 'active' : ''} ${isSolved ? 'solved' : ''}"
+         onclick="selectQuestion(${i})">
+      <div class="num">${isSolved ? '&#10003;' : i + 1}</div>
+      <div class="info">
+        <div class="title">${escapeHtml(title)}</div>
+        ${diff ? `<div class="diff ${diff.toLowerCase()}">${diff}</div>` : ''}
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function selectQuestion(idx) {
+  currentQuestion = currentQuestions[idx];
+  quizSelected = null; quizSubmitted = false;
+  renderQuestionList();
+  renderMainArea();
+}
+
+// ==================== RENDER MAIN AREA ====================
+function renderMainArea() {
+  const main = document.getElementById("mainArea");
+  if (currentModule.type === "quiz") renderQuizView(main);
+  else renderCodeView(main);
+}
+
+function renderCodeView(main) {
+  const q = currentQuestion;
+  const isSql = currentModule.type === "sql";
+  let schemaContent = "", summaryText = "";
+  if (isSql) {
+    summaryText = "Schema & Sample Data";
+    schemaContent = q.schema + "\n\n-- Sample Data\n" + q.seed;
+  } else {
+    summaryText = "Function Signature & Test Cases";
+    schemaContent = `# Signature\n${q.signature}\n\n# Test Cases`;
+    q.testCases.forEach(tc => { schemaContent += `\n${tc.input}  =>  ${tc.expected}`; });
+  }
+
+  main.innerHTML = `
+    <div class="problem-panel">
+      <h2>${escapeHtml(q.title)}</h2>
+      <p>${escapeHtml(q.problem)}</p>
+    </div>
+    <div class="schema-area"><details open><summary>${summaryText}</summary><pre>${escapeHtml(schemaContent)}</pre></details></div>
+    <div class="workspace">
+      <div class="editor-area">
+        <textarea id="codeEditor" spellcheck="false"
+          placeholder="${isSql ? 'Write your SQL query here...' : 'Write your Python code here...'}">${isSql ? '' : escapeHtml(q.starter || '')}</textarea>
+        <div class="btn-row">
+          <button class="btn btn-run" onclick="runCode()">${isSql ? 'Run Query' : 'Run Code'}</button>
+          <button class="btn btn-answer" onclick="showAnswer()">Show Answer</button>
+        </div>
+      </div>
+      <div class="result-area" id="resultArea"></div>
+    </div>`;
+
+  const editor = document.getElementById("codeEditor");
+  editor.addEventListener("keydown", (e) => {
+    if (e.ctrlKey && e.key === "Enter") { e.preventDefault(); runCode(); return; }
+    if (e.key === "Tab" && currentModule.type === "python") {
+      e.preventDefault();
+      const s = editor.selectionStart, end = editor.selectionEnd;
+      editor.value = editor.value.substring(0, s) + "    " + editor.value.substring(end);
+      editor.selectionStart = editor.selectionEnd = s + 4;
+    }
+  });
+}
+
+function renderQuizView(main) {
+  const q = currentQuestion;
+  const letters = ["A", "B", "C", "D"];
+  main.innerHTML = `
+    <div style="padding:24px;flex:1;overflow-y:auto;">
+      <div class="quiz-question">${escapeHtml(q.question)}</div>
+      <div class="quiz-options" id="quizOptions">
+        ${q.options.map((opt, i) => `
+          <div class="quiz-option" data-idx="${i}" onclick="selectQuizOption(${i})">
+            <div class="opt-letter">${letters[i]}</div>
+            <span>${escapeHtml(opt)}</span>
+          </div>`).join("")}
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-run" id="quizSubmitBtn" onclick="submitQuiz()" disabled>Submit Answer</button>
+        <button class="btn btn-answer" onclick="showQuizAnswer()">Show Answer</button>
+      </div>
+      <div id="quizResult"></div>
+    </div>`;
+}
+
+function selectQuizOption(idx) {
+  if (quizSubmitted) return;
+  quizSelected = idx;
+  document.querySelectorAll(".quiz-option").forEach((el, i) => el.classList.toggle("selected", i === idx));
+  document.getElementById("quizSubmitBtn").disabled = false;
+}
+
+async function submitQuiz() {
+  if (quizSelected === null || quizSubmitted) return;
+  quizSubmitted = true;
+  const data = await (await fetch("/run-quiz", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question_id: currentQuestion.id, selected: quizSelected }) })).json();
+  document.querySelectorAll(".quiz-option").forEach((el, i) => {
+    el.classList.remove("selected");
+    if (i === data.correctAnswer) el.classList.add("correct");
+    else if (i === quizSelected && !data.correct) el.classList.add("wrong");
+    el.style.cursor = "default";
+  });
+  if (data.correct) { solved[currentModule.id].add(currentQuestion.id); document.getElementById("practiceScore").textContent = solved[currentModule.id].size; renderQuestionList(); saveProgress(currentModule.id, currentQuestion.id); }
+  document.getElementById("quizResult").innerHTML = `<div class="result-banner ${data.correct ? 'correct' : 'incorrect'}">${data.correct ? 'Correct!' : 'Incorrect'}</div><div class="quiz-explanation">${escapeHtml(data.explanation)}</div>`;
+  document.getElementById("quizSubmitBtn").disabled = true;
+}
+
+async function showQuizAnswer() {
+  const data = await (await fetch(`/api/quiz-questions/${currentModule.id}/${currentQuestion.id}/answer`)).json();
+  document.getElementById("quizResult").innerHTML = `<div class="quiz-explanation"><strong>Answer: ${["A","B","C","D"][data.correctAnswer]}</strong><br><br>${escapeHtml(data.explanation)}</div>`;
+}
+
+// ==================== RUN CODE ====================
+async function runCode() {
+  if (!currentQuestion) return;
+  if (currentModule.type === "sql") await runSQL();
+  else if (currentModule.type === "python") await runPython();
+}
+
+async function runSQL() {
+  const query = document.getElementById("codeEditor").value.trim();
+  if (!query) return;
+  const area = document.getElementById("resultArea");
+  area.innerHTML = "<p style='color:#94a3b8'>Running...</p>";
+  try {
+    const data = await (await fetch("/run-query", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ query, question_id: currentQuestion.id }) })).json();
+    if (data.error) { area.innerHTML = `<div class="result-banner error">Error: ${escapeHtml(data.error)}</div>`; return; }
+    if (data.correct) { solved[currentModule.id].add(currentQuestion.id); document.getElementById("practiceScore").textContent = solved[currentModule.id].size; renderQuestionList(); saveProgress(currentModule.id, currentQuestion.id); }
+    area.innerHTML = `<div class="result-banner ${data.correct ? 'correct' : 'incorrect'}">${data.correct ? 'Correct!' : 'Incorrect - check your query'}</div>
+      <div class="result-section"><h3>Your Result</h3>${renderTable(data.userResult)}</div>
+      <div class="result-section"><h3>Expected Result</h3>${renderTable(data.expectedOutput)}</div>`;
+  } catch (e) { area.innerHTML = `<div class="result-banner error">Network error: ${escapeHtml(e.message)}</div>`; }
+}
+
+async function runPython() {
+  const code = document.getElementById("codeEditor").value.trim();
+  if (!code) return;
+  const area = document.getElementById("resultArea");
+  area.innerHTML = "<p style='color:#94a3b8'>Running...</p>";
+  try {
+    const data = await (await fetch("/run-python", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code, question_id: currentQuestion.id }) })).json();
+    if (data.error) { area.innerHTML = `<div class="result-banner error"><pre style="margin:0;white-space:pre-wrap;font-family:Consolas,monospace;font-size:0.82rem">${escapeHtml(data.error)}</pre></div>`; return; }
+    const passed = data.testResults.filter(t => t.passed).length;
+    if (data.correct) { solved[currentModule.id].add(currentQuestion.id); document.getElementById("practiceScore").textContent = solved[currentModule.id].size; renderQuestionList(); saveProgress(currentModule.id, currentQuestion.id); }
+    area.innerHTML = `<div class="result-banner ${data.correct ? 'correct' : 'incorrect'}">${data.correct ? 'All tests passed!' : `${passed}/${data.testResults.length} tests passed`}</div>
+      <div class="result-section"><h3>Test Results</h3>${data.testResults.map((t, i) => `<div class="test-case ${t.passed ? 'passed' : 'failed'}"><div class="label">${t.passed ? 'PASS' : 'FAIL'} - Test ${i+1}</div><div>Input: ${escapeHtml(t.input)}</div><div>Expected: ${escapeHtml(t.expected)}</div><div>Actual: ${escapeHtml(t.actual)}</div></div>`).join("")}</div>`;
+  } catch (e) { area.innerHTML = `<div class="result-banner error">Network error: ${escapeHtml(e.message)}</div>`; }
+}
+
+async function showAnswer() {
+  if (!currentQuestion) return;
+  const area = document.getElementById("resultArea");
+  const url = currentModule.type === "sql" ? `/api/questions/${currentQuestion.id}/answer` : `/api/python-questions/${currentQuestion.id}/answer`;
+  const data = await (await fetch(url)).json();
+  area.innerHTML = `<div class="answer-box"><h3 style="color:#94a3b8;margin-bottom:8px;">Solution</h3><pre>${escapeHtml(data.answer)}</pre></div>`;
+}
+
+// ==================== HELPERS ====================
+function renderTable(rows) {
+  if (!rows || !rows.length) return "<p style='color:#94a3b8;font-size:0.82rem'>No rows returned.</p>";
+  const cols = Object.keys(rows[0]);
+  return `<table><thead><tr>${cols.map(c => `<th>${c}</th>`).join("")}</tr></thead>
+    <tbody>${rows.map(r => `<tr>${cols.map(c => `<td>${r[c]}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+}
+
+function escapeHtml(str) {
+  if (str == null) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+init();
+</script>
+</body>
+</html>
