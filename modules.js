@@ -67,7 +67,7 @@ const modules = [
     col: 1,
     deps: ["python-basics"],
     type: "python",
-    questionFilter: { ids: [8, 9, 10, 11, 12, 13, 14, 15] },
+    questionFilter: { ids: [8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 20, 21, 22, 23, 24, 25, 29, 30, 31, 32, 33, 40, 41, 42, 45, 46, 47, 48, 49, 51, 52, 53, 55, 56, 57, 59, 60, 62, 63, 64, 65] },
     color: "#f59e0b",
   },
   {
@@ -81,6 +81,33 @@ const modules = [
     deps: ["linux-shell"],
     type: "quiz",
     color: "#ef4444",
+  },
+
+  {
+    id: "sql-de",
+    title: "SQL for Data Engineering",
+    shortTitle: "SQL for DE",
+    description: "DE-focused SQL: deduplication, SCD types, CDC, data lineage, pipeline monitoring, star schemas, and skew detection.",
+    icon: "db",
+    level: 1,
+    col: 3,
+    deps: ["sql-fundamentals"],
+    type: "sql",
+    questionFilter: { ids: [31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55] },
+    color: "#0891b2",
+  },
+  {
+    id: "python-dsa-hard",
+    title: "Python DSA - Hard Problems",
+    shortTitle: "DSA Hard",
+    description: "Hard DE DSA: 3Sum, sliding window max, meeting rooms, merge K lists, median of arrays, LRU cache, and more.",
+    icon: "py",
+    level: 1,
+    col: 4,
+    deps: ["python-basics"],
+    type: "python",
+    questionFilter: { ids: [17, 19, 27, 28, 34, 35, 38, 39, 43, 44, 50, 54, 58, 61] },
+    color: "#dc2626",
   },
 
   // ===== Level 2: Core Data Engineering =====
