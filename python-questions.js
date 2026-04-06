@@ -1701,6 +1701,33 @@ const pythonQuestions = [
                 result.append(row.pop(0))
     return result`,
   },
+  {
+    id: 66,
+    title: "DE: Move Duplicates to End of Array",
+    difficulty: "Medium",
+    problem:
+      "Write a function `move_duplicates_to_end(a)` that takes a list of integers and moves all duplicate occurrences to the end of the list. The first occurrence of each element should stay in its original relative order, and the duplicates should be appended at the end in the order they were encountered. Return the modified list.\n\n**Example:**\n`[1, 1, 2, 2, 3, 3, 3, 4, 4, 5]` → `[1, 2, 3, 4, 5, 1, 2, 3, 4]`\n\n**Hint:** Be careful — modifying a list (e.g. using `pop` / `append`) while iterating over it with `enumerate` causes index shifting and leads to unexpected results.",
+    signature: "def move_duplicates_to_end(a):",
+    starter: "def move_duplicates_to_end(a):\n    # Your code here\n    pass",
+    testCases: [
+      { input: "move_duplicates_to_end([1, 1, 2, 2, 3, 3, 3, 4, 4, 5])", expected: "[1, 2, 3, 4, 5, 1, 2, 3, 4]" },
+      { input: "move_duplicates_to_end([1, 2, 3, 4, 5])", expected: "[1, 2, 3, 4, 5]" },
+      { input: "move_duplicates_to_end([5, 5, 5, 5])", expected: "[5, 5, 5, 5]" },
+      { input: "move_duplicates_to_end([1, 2, 1, 3, 2, 4])", expected: "[1, 2, 3, 4, 1, 2]" },
+      { input: "move_duplicates_to_end([])", expected: "[]" },
+    ],
+    answer: `def move_duplicates_to_end(a):
+    seen = set()
+    unique = []
+    duplicates = []
+    for x in a:
+        if x in seen:
+            duplicates.append(x)
+        else:
+            seen.add(x)
+            unique.append(x)
+    return unique + duplicates`,
+  },
 ];
 
 module.exports = pythonQuestions;

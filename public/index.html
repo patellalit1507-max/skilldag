@@ -789,10 +789,11 @@ function renderCodeView(main) {
     <div class="workspace">
       <div class="editor-area">
         <textarea id="codeEditor" spellcheck="false"
-          placeholder="${isSql ? 'Write your SQL query here...' : 'Write your Python code here...'}">${isSql ? '' : escapeHtml(q.starter || '')}</textarea>
+          placeholder="${isSql ? 'Write your SQL query here...' : 'Write your Python code here...'}">${getSavedCode(currentModule.type, q.id, isSql ? '' : q.starter || '')}</textarea>
         <div class="btn-row">
           <button class="btn btn-run" onclick="runCode()">${isSql ? 'Run Query' : 'Run Code'}</button>
           <button class="btn btn-answer" onclick="showAnswer()">Show Answer</button>
+          <button class="btn" onclick="resetCode()" style="background:#334155;color:#94a3b8;">Reset</button>
         </div>
       </div>
       <div class="result-area" id="resultArea"></div>
@@ -808,6 +809,28 @@ function renderCodeView(main) {
       editor.selectionStart = editor.selectionEnd = s + 4;
     }
   });
+  editor.addEventListener("input", () => {
+    saveCode(currentModule.type, currentQuestion.id, editor.value);
+  });
+}
+
+function codeKey(type, qid) { return `code_${type}_${qid}`; }
+
+function saveCode(type, qid, code) {
+  localStorage.setItem(codeKey(type, qid), code);
+}
+
+function getSavedCode(type, qid, fallback) {
+  const saved = localStorage.getItem(codeKey(type, qid));
+  return saved !== null ? escapeHtml(saved) : escapeHtml(fallback);
+}
+
+function resetCode() {
+  if (!currentQuestion || !currentModule) return;
+  const isSql = currentModule.type === "sql";
+  const starter = isSql ? "" : (currentQuestion.starter || "");
+  localStorage.removeItem(codeKey(currentModule.type, currentQuestion.id));
+  document.getElementById("codeEditor").value = starter;
 }
 
 function renderQuizView(main) {
