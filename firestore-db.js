@@ -91,6 +91,72 @@ async function getProgress(userId) {
   return rows;
 }
 
+async function getActivityData(userId) {
+  const snap = await progressCol.where("user_id", "==", userId).get();
+  const dailyCounts = {};
+  snap.forEach((doc) => {
+    const d = doc.data();
+    if (d.solved_at) {
+      const date = d.solved_at.slice(0, 10);
+      dailyCounts[date] = (dailyCounts[date] || 0) + 1;
+    }
+  });
+
+  // Filter to last 365 days
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const cutoff = new Date(today);
+  cutoff.setDate(cutoff.getDate() - 364);
+  const cutoffStr = cutoff.toISOString().slice(0, 10);
+
+  const filtered = {};
+  for (const [date, count] of Object.entries(dailyCounts)) {
+    if (date >= cutoffStr) filtered[date] = count;
+  }
+
+  // Calculate streaks
+  const activeDates = Object.keys(dailyCounts).sort();
+  let currentStreak = 0;
+  let longestStreak = 0;
+
+  if (activeDates.length > 0) {
+    // Longest streak
+    let run = 1;
+    for (let i = 1; i < activeDates.length; i++) {
+      const prev = new Date(activeDates[i - 1] + "T00:00:00");
+      const curr = new Date(activeDates[i] + "T00:00:00");
+      const diff = (curr - prev) / (1000 * 60 * 60 * 24);
+      if (diff === 1) { run++; } else { run = 1; }
+      if (run > longestStreak) longestStreak = run;
+    }
+    if (activeDates.length === 1 || longestStreak === 0) longestStreak = 1;
+
+    // Current streak — count back from today or yesterday
+    const todayStr = today.toISOString().slice(0, 10);
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().slice(0, 10);
+
+    let checkDate;
+    if (dailyCounts[todayStr]) {
+      checkDate = new Date(today);
+    } else if (dailyCounts[yesterdayStr]) {
+      checkDate = new Date(yesterday);
+    }
+
+    if (checkDate) {
+      currentStreak = 1;
+      while (true) {
+        checkDate.setDate(checkDate.getDate() - 1);
+        const ds = checkDate.toISOString().slice(0, 10);
+        if (dailyCounts[ds]) { currentStreak++; } else { break; }
+      }
+    }
+  }
+
+  return { dailyCounts: filtered, currentStreak, longestStreak };
+}
+
 module.exports = {
   db,
   createUser,
@@ -101,4 +167,5 @@ module.exports = {
   deleteSession,
   saveProgress,
   getProgress,
+  getActivityData,
 };

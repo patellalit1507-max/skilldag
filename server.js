@@ -151,6 +151,15 @@ app.post("/api/progress", authRequired, async (req, res) => {
   }
 });
 
+app.get("/api/activity", authRequired, async (req, res) => {
+  try {
+    const data = await firestoreDb.getActivityData(req.user.id);
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to load activity data" });
+  }
+});
+
 // ==================== ROADMAPS & MODULES ====================
 
 app.get("/api/roadmaps", (req, res) => {

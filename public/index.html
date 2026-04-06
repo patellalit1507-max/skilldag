@@ -24,6 +24,51 @@
     }
     .home-stats .stat .val { font-size: 1.4rem; font-weight: 700; color: #4ade80; }
     .home-stats .stat .lbl { font-size: 0.72rem; color: #94a3b8; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .home-stats .stat .val.streak { color: #f97316; }
+
+    /* Heatmap */
+    .heatmap-section { max-width: 900px; margin: 24px auto 0; padding: 0 20px; }
+    .heatmap-section h3 {
+      font-size: 0.78rem; color: #94a3b8; text-transform: uppercase;
+      letter-spacing: 0.5px; margin-bottom: 10px; font-weight: 600;
+    }
+    .heatmap-scroll { overflow-x: auto; padding-bottom: 8px; }
+    .heatmap-wrapper { display: inline-flex; gap: 0; }
+    .heatmap-day-labels { display: flex; flex-direction: column; gap: 3px; padding-top: 20px; margin-right: 6px; }
+    .heatmap-day-labels span {
+      font-size: 0.6rem; color: #64748b; height: 12px; line-height: 12px; text-align: right;
+    }
+    .heatmap-grid {
+      display: inline-grid;
+      grid-template-rows: auto repeat(7, 12px);
+      grid-auto-flow: column;
+      grid-auto-columns: 12px;
+      gap: 3px;
+    }
+    .heatmap-month {
+      grid-row: 1; font-size: 0.6rem; color: #64748b; line-height: 16px;
+      text-align: left; white-space: nowrap;
+    }
+    .heatmap-cell {
+      width: 12px; height: 12px; border-radius: 2px;
+      background: #161b22; position: relative; cursor: default;
+    }
+    .heatmap-cell[data-level="1"] { background: #0e4429; }
+    .heatmap-cell[data-level="2"] { background: #006d32; }
+    .heatmap-cell[data-level="3"] { background: #26a641; }
+    .heatmap-cell[data-level="4"] { background: #39d353; }
+    .heatmap-tooltip {
+      display: none; position: absolute; bottom: calc(100% + 6px); left: 50%;
+      transform: translateX(-50%); background: #1e293b; border: 1px solid #475569;
+      padding: 4px 8px; border-radius: 4px; font-size: 0.68rem;
+      color: #e2e8f0; white-space: nowrap; z-index: 10; pointer-events: none;
+    }
+    .heatmap-cell:hover .heatmap-tooltip { display: block; }
+    .heatmap-legend { display: flex; align-items: center; gap: 4px; margin-top: 8px; justify-content: flex-end; }
+    .heatmap-legend span { font-size: 0.6rem; color: #64748b; }
+    .heatmap-legend .legend-cell {
+      width: 12px; height: 12px; border-radius: 2px; display: inline-block;
+    }
 
     /* Roadmap tabs */
     .roadmap-tabs {
@@ -322,6 +367,36 @@
       <div class="stat"><div class="val" id="statModules">0</div><div class="lbl">Modules</div></div>
       <div class="stat"><div class="val" id="statQuestions">0</div><div class="lbl">Questions</div></div>
       <div class="stat"><div class="val" id="statCompleted">0</div><div class="lbl">Completed</div></div>
+      <div class="stat" id="streakStat" style="display:none">
+        <div class="val streak" id="statCurrentStreak">0</div>
+        <div class="lbl">&#128293; Day Streak</div>
+      </div>
+      <div class="stat" id="longestStreakStat" style="display:none">
+        <div class="val streak" id="statLongestStreak">0</div>
+        <div class="lbl">&#127942; Best Streak</div>
+      </div>
+    </div>
+    <div class="heatmap-section" id="heatmapSection" style="display:none">
+      <h3>Activity</h3>
+      <div class="heatmap-scroll">
+        <div class="heatmap-wrapper">
+          <div class="heatmap-day-labels">
+            <span>&nbsp;</span><span>Mon</span><span>&nbsp;</span><span>Wed</span><span>&nbsp;</span><span>Fri</span><span>&nbsp;</span>
+          </div>
+          <div>
+            <div class="heatmap-grid" id="heatmapGrid"></div>
+            <div class="heatmap-legend">
+              <span>Less</span>
+              <div class="legend-cell" style="background:#161b22"></div>
+              <div class="legend-cell" style="background:#0e4429"></div>
+              <div class="legend-cell" style="background:#006d32"></div>
+              <div class="legend-cell" style="background:#26a641"></div>
+              <div class="legend-cell" style="background:#39d353"></div>
+              <span>More</span>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
   <div class="dag-scroll">
@@ -429,6 +504,7 @@ async function submitAuth() {
     updateAuthUI();
     await loadProgress();
     renderDAG();
+    loadActivity();
   } catch (e) { errEl.textContent = "Network error. Please try again."; }
 }
 
@@ -448,6 +524,10 @@ async function logout() {
   Object.keys(solved).forEach(k => delete solved[k]);
   updateAuthUI();
   renderDAG();
+  // Hide activity section
+  document.getElementById("heatmapSection").style.display = "none";
+  document.getElementById("streakStat").style.display = "none";
+  document.getElementById("longestStreakStat").style.display = "none";
 }
 
 function updateAuthUI() {
@@ -489,6 +569,7 @@ async function saveProgress(moduleId, questionId) {
     const badge = document.getElementById("savedBadge");
     badge.classList.add("show");
     setTimeout(() => badge.classList.remove("show"), 1500);
+    loadActivity();
   } catch {}
 }
 
@@ -516,6 +597,7 @@ async function init() {
   renderRoadmapTabs();
   await switchRoadmap(roadmapsData[0]?.id || "data-engineering");
   updateAuthUI();
+  loadActivity();
   window.addEventListener("resize", drawArrows);
 }
 
@@ -692,6 +774,92 @@ function updateStats() {
   });
   document.getElementById("statQuestions").textContent = totalQ;
   document.getElementById("statCompleted").textContent = totalSolved;
+}
+
+// ==================== ACTIVITY HEATMAP & STREAKS ====================
+async function loadActivity() {
+  const section = document.getElementById("heatmapSection");
+  const streakEl = document.getElementById("streakStat");
+  const longestEl = document.getElementById("longestStreakStat");
+  if (!authToken) {
+    section.style.display = "none";
+    streakEl.style.display = "none";
+    longestEl.style.display = "none";
+    return;
+  }
+  try {
+    const res = await fetch("/api/activity", { headers: getAuthHeaders() });
+    if (!res.ok) return;
+    const data = await res.json();
+    document.getElementById("statCurrentStreak").textContent = data.currentStreak;
+    document.getElementById("statLongestStreak").textContent = data.longestStreak;
+    streakEl.style.display = "";
+    longestEl.style.display = "";
+    renderHeatmap(data.dailyCounts);
+    section.style.display = "";
+  } catch {}
+}
+
+function renderHeatmap(dailyCounts) {
+  const grid = document.getElementById("heatmapGrid");
+  grid.innerHTML = "";
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // Go back 364 days (365 total including today)
+  const start = new Date(today);
+  start.setDate(start.getDate() - 364);
+
+  // Align start to the previous Sunday
+  const startDay = start.getDay(); // 0=Sun
+  if (startDay !== 0) start.setDate(start.getDate() - startDay);
+
+  const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const dayNames = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+
+  const cursor = new Date(start);
+  let lastMonth = -1;
+
+  while (cursor <= today) {
+    const dayOfWeek = cursor.getDay();
+
+    // If start of a new week column (Sunday), add month label
+    if (dayOfWeek === 0) {
+      const m = cursor.getMonth();
+      const monthLabel = document.createElement("div");
+      monthLabel.className = "heatmap-month";
+      // Show month name on first week of month or first column
+      if (m !== lastMonth) {
+        monthLabel.textContent = months[m];
+        lastMonth = m;
+      }
+      grid.appendChild(monthLabel);
+    }
+
+    // Add day cell
+    const dateStr = cursor.toISOString().slice(0, 10);
+    const count = dailyCounts[dateStr] || 0;
+    let level = 0;
+    if (count >= 8) level = 4;
+    else if (count >= 5) level = 3;
+    else if (count >= 3) level = 2;
+    else if (count >= 1) level = 1;
+
+    const cell = document.createElement("div");
+    cell.className = "heatmap-cell";
+    cell.dataset.level = level;
+    cell.style.gridRow = (dayOfWeek + 2); // row 1 = month labels, rows 2-8 = days
+
+    const dateObj = new Date(cursor);
+    const tipText = count === 0
+      ? `No activity on ${dayNames[dayOfWeek]}, ${months[dateObj.getMonth()]} ${dateObj.getDate()}`
+      : `${count} question${count > 1 ? "s" : ""} on ${dayNames[dayOfWeek]}, ${months[dateObj.getMonth()]} ${dateObj.getDate()}`;
+    cell.innerHTML = `<div class="heatmap-tooltip">${tipText}</div>`;
+
+    grid.appendChild(cell);
+    cursor.setDate(cursor.getDate() + 1);
+  }
 }
 
 // ==================== OPEN MODULE ====================
