@@ -618,7 +618,7 @@ async function switchRoadmap(roadmapId) {
   // Update header
   const titles = {
     "data-engineering": { title: "Data Engineering Learning Path", desc: "Master data engineering from scratch. Follow the DAG below \u2014 each node is a module with hands-on practice questions." },
-    "ai-ml": { title: "AI / ML Mastery", desc: "Your roadmap to mastering Artificial Intelligence and Machine Learning. Topics will be added progressively \u2014 stay tuned!" },
+    "ai-ml": { title: "AI Engineer Roadmap", desc: "Your roadmap to becoming an AI Engineer. Start with the fundamentals of the role, then progress through the technical foundations, core ML, deep learning, and production skills." },
   };
   const t = titles[roadmapId] || { title: currentRoadmap.title, desc: "" };
   document.getElementById("roadmapTitle").textContent = t.title;

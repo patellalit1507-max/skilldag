@@ -16,7 +16,7 @@ const firestoreDb = require("./firestore-db");
 
 const roadmaps = [
   { id: "data-engineering", title: "Data Engineering", icon: "pipeline", modules },
-  { id: "ai-ml", title: "AI / ML Mastery", icon: "brain", modules: aimlModules },
+  { id: "ai-ml", title: "AI Engineer Roadmap", icon: "brain", modules: aimlModules },
 ];
 
 const app = express();
