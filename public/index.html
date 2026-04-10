@@ -644,7 +644,10 @@ function renderRoadmapTabs() {
 }
 
 // ==================== DAG RENDERING ====================
-const LEVEL_LABELS = ["Foundations", "Intermediate", "Core Data Engineering", "Ecosystem", "Advanced", "DevOps & Capstone"];
+const LEVEL_LABELS_BY_ROADMAP = {
+  "data-engineering": ["Foundations", "Intermediate", "Core Data Engineering", "Ecosystem", "Advanced", "DevOps & Capstone"],
+  "ai-ml": ["Foundations", "Prompting & LLMs", "Tools & Ecosystem", "Retrieval & RAG", "Advanced AI"],
+};
 
 function getModuleQuestionCount(mod) {
   if (mod.type === "sql" || mod.type === "python") return mod.questionFilter?.ids?.length || 0;
@@ -652,7 +655,13 @@ function getModuleQuestionCount(mod) {
 }
 
 function getIcon(icon) {
-  const icons = { db:"SQL", py:"PY", terminal:">_", git:"GIT", schema:"ER", pipeline:"ETL", docker:"DOC", warehouse:"WH", spark:"SPK", airflow:"AF", cloud:"CLD", stream:"STR", check:"QA", rocket:"CI" };
+  const icons = {
+    db:"SQL", py:"PY", terminal:">_", git:"GIT", schema:"ER", pipeline:"ETL",
+    docker:"DOC", warehouse:"WH", spark:"SPK", airflow:"AF", cloud:"CLD",
+    stream:"STR", check:"QA", rocket:"CI",
+    brain:"AI", llm:"LLM", prompt:"PRM", hub:"HUB", model:"MDL", dev:"DEV",
+    vector:"VEC", agent:"BOT", image:"IMG", shield:"SEC",
+  };
   return icons[icon] || "?";
 }
 
@@ -671,12 +680,13 @@ function renderDAG() {
   }
 
   const maxLevel = Math.max(...modulesData.map(m => m.level));
+  const levelLabels = LEVEL_LABELS_BY_ROADMAP[currentRoadmap?.id] || [];
 
   let html = "";
   for (let lvl = 0; lvl <= maxLevel; lvl++) {
     const mods = modulesData.filter(m => m.level === lvl).sort((a, b) => a.col - b.col);
     html += `<div class="dag-level">
-      <div class="dag-level-label">${LEVEL_LABELS[lvl] || 'Level ' + lvl}</div>
+      <div class="dag-level-label">${levelLabels[lvl] || 'Level ' + lvl}</div>
       <div class="dag-level-row">
         ${mods.map(mod => renderNode(mod)).join("")}
       </div>

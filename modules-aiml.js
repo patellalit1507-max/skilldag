@@ -1,8 +1,8 @@
 // AI Engineer Roadmap - Module Definitions
-// Modules will be added progressively. Each module follows the same structure as DE modules.
+// Progression: Foundations -> Prompting & LLMs -> Tools & Ecosystem -> Retrieval & RAG -> Advanced AI
 
 const aimlModules = [
-  // ===== Level 0: Introduction =====
+  // ===== Level 0: Foundations =====
   {
     id: "intro-ai-engineering",
     title: "Introduction to AI Engineering",
@@ -15,17 +15,134 @@ const aimlModules = [
     type: "quiz",
     color: "#8b5cf6",
   },
+  {
+    id: "core-llm-elements",
+    title: "Core LLM Elements",
+    shortTitle: "Core LLM",
+    description: "How LLMs actually work: tokens, context windows, sampling parameters, temperature, top-K / top-P, and repetition penalties.",
+    icon: "llm",
+    level: 0,
+    col: 1,
+    deps: ["intro-ai-engineering"],
+    type: "quiz",
+    color: "#a855f7",
+  },
 
-  // ===== Level 1: Foundations =====
-  // Topics will be added progressively
+  // ===== Level 1: Prompting & LLMs =====
+  {
+    id: "prompt-engineering",
+    title: "Prompt Engineering",
+    shortTitle: "Prompt Eng",
+    description: "Zero-shot, few-shot, chain-of-thought, prompt patterns, system prompts, structured outputs, guardrails & safety, prompt optimization, and prompt chaining.",
+    icon: "prompt",
+    level: 1,
+    col: 0,
+    deps: ["core-llm-elements"],
+    type: "quiz",
+    color: "#6366f1",
+  },
+  {
+    id: "working-with-llms",
+    title: "Working with LLMs",
+    shortTitle: "Working w/ LLMs",
+    description: "Fine-tuning, prompt engineering, context engineering, and RAG basics — the four core techniques for getting real work out of an LLM.",
+    icon: "brain",
+    level: 1,
+    col: 1,
+    deps: ["core-llm-elements"],
+    type: "quiz",
+    color: "#7c3aed",
+  },
 
-  // ===== Level 2: Core ML =====
+  // ===== Level 2: Tools & Ecosystem =====
+  {
+    id: "platforms-ecosystem",
+    title: "Platforms & Ecosystem",
+    shortTitle: "Platforms",
+    description: "Hugging Face (Tasks, Hub, Transformers), Ollama, LM Studio, OpenRouter, and OpenAI-compatible / cloud provider APIs.",
+    icon: "hub",
+    level: 2,
+    col: 0,
+    deps: ["working-with-llms"],
+    type: "quiz",
+    color: "#0ea5e9",
+  },
+  {
+    id: "choosing-right-model",
+    title: "Choosing the Right Model",
+    shortTitle: "Model Choice",
+    description: "OpenAI / GPT family, Anthropic / Claude family, Google models, and open-source models (LLaMA, Mistral, DeepSeek, Qwen). How to pick for your use case.",
+    icon: "model",
+    level: 2,
+    col: 1,
+    deps: ["working-with-llms"],
+    type: "quiz",
+    color: "#14b8a6",
+  },
+  {
+    id: "dev-tools",
+    title: "Development Tools",
+    shortTitle: "Dev Tools",
+    description: "AI coding assistants, IDE integrations, and developer tools that let AI engineers ship faster.",
+    icon: "dev",
+    level: 2,
+    col: 2,
+    deps: ["prompt-engineering"],
+    type: "quiz",
+    color: "#f59e0b",
+  },
 
-  // ===== Level 3: Deep Learning =====
+  // ===== Level 3: Retrieval & RAG =====
+  {
+    id: "embeddings-vector-db",
+    title: "Embeddings & Vector Databases",
+    shortTitle: "Embeddings / VecDB",
+    description: "What are embeddings, embedding models, semantic search, vector databases, similarity search, and the full RAG pipeline.",
+    icon: "vector",
+    level: 3,
+    col: 0,
+    deps: ["working-with-llms", "platforms-ecosystem"],
+    type: "quiz",
+    color: "#ec4899",
+  },
 
-  // ===== Level 4: Specialized =====
-
-  // ===== Level 5: Production =====
+  // ===== Level 4: Advanced AI =====
+  {
+    id: "ai-agents",
+    title: "AI Agents",
+    shortTitle: "AI Agents",
+    description: "What are AI agents, agent frameworks, memory and tools, agent architecture, multi-agent systems, and evaluation & observability.",
+    icon: "agent",
+    level: 4,
+    col: 0,
+    deps: ["embeddings-vector-db"],
+    type: "quiz",
+    color: "#06b6d4",
+  },
+  {
+    id: "multimodal-ai",
+    title: "Multimodal AI",
+    shortTitle: "Multimodal",
+    description: "Image understanding, image generation, video / audio / text, and multimodal APIs for building beyond-text experiences.",
+    icon: "image",
+    level: 4,
+    col: 1,
+    deps: ["platforms-ecosystem", "working-with-llms"],
+    type: "quiz",
+    color: "#f43f5e",
+  },
+  {
+    id: "ai-safety-ethics",
+    title: "AI Safety & Ethics",
+    shortTitle: "Safety & Ethics",
+    description: "Prompt injection, jailbreak prevention, responsible AI, and data privacy & safety — the guardrails every AI engineer must understand.",
+    icon: "shield",
+    level: 4,
+    col: 2,
+    deps: ["prompt-engineering", "working-with-llms"],
+    type: "quiz",
+    color: "#10b981",
+  },
 ];
 
 module.exports = aimlModules;
